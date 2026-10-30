@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Executive Work Log & Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0066ff',
+              600: '#0052cc',
+              900: '#0b192c',
+              gold: '#D4AF37'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars & glassmorphism */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+
+  <!-- Header Section -->
+  <header class="glass-panel sticky top-0 z-30 px-6 py-4 border-b border-slate-800/80 flex items-center justify-between shadow-2xl">
+    <div class="flex items-center space-x-3">
+      <div class="p-2.5 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/20">
+        <i data-lucide="calendar" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400">
+          Executive Calendar & Log
+        </h1>
+        <p class="text-xs text-slate-400">高端職場個人日誌與主管匯報系統</p>
+      </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="flex items-center space-x-3">
+      <button onclick="openModal()" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-all duration-200 shadow-lg shadow-blue-600/30 hover:shadow-blue-500/40">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>新增紀錄</span>
+      </button>
+      <button onclick="openWeeklySummary()" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium text-sm transition-all">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+        <span>週報／主管回報</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Left Sidebar: Day Overview & Overdue Alerts -->
+    <aside class="w-80 border-r border-slate-800/80 flex flex-col bg-slate-950/40">
+      
+      <!-- Overdue & Priority Alerts Section -->
+      <div class="p-4 border-b border-slate-800/80">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="alert-circle" class="w-4 h-4"></i> 待辦追蹤與重要提醒
+          </span>
+          <span id="overdueCount" class="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-300 font-bold">0</span>
+        </div>
+        <div id="alertList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+          <!-- Dynamic Alerts -->
+        </div>
+      </div>
+
+      <!-- Selected Date Detail Logs -->
+      <div class="flex-1 flex flex-col p-4 overflow-hidden">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 id="selectedDateTitle" class="text-sm font-bold text-slate-200">今日事項</h2>
+            <p id="selectedDateSub" class="text-xs text-slate-400">點擊月曆即可切換查看日期</p>
+          </div>
+          <button onclick="openModal()" class="text-xs text-blue-400 hover:underline flex items-center gap-1">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> 新增
+          </button>
+        </div>
+
+        <div id="dayLogList" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+          <!-- Dynamic Selected Day Logs -->
+        </div>
+
+        <!-- Daily Review Component -->
+        <div class="mt-4 pt-3 border-t border-slate-800/80">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
+              <i data-lucide="book-open" class="w-3.5 h-3.5 text-indigo-400"></i> 每日工作回顧
+            </span>
+            <button onclick="saveDailyReview()" class="text-[11px] text-indigo-400 hover:text-indigo-300">儲存</button>
+          </div>
+          <textarea id="dailyReviewInput" rows="2" placeholder="紀錄今日工作心得、遭遇的困難或明日待辦..." 
+            class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-slate-200 placeholder-slate-600 resize-none"></textarea>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right Center: Calendar View -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-900/30">
+      
+      <!-- Calendar Nav Header -->
+      <div class="px-6 py-3 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/20">
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-1">
+            <button onclick="changeMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition">
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            <button onclick="goToday()" class="px-3 py-1 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+              今天
+            </button>
+            <button onclick="changeMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition">
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <h2 id="currentMonthYear" class="text-lg font-bold text-slate-100"></h2>
+        </div>
+
+        <!-- Legend Tags -->
+        <div class="flex items-center space-x-4 text-xs text-slate-400">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> 每日工作</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 主管交辦</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 會議/行程</span>
+        </div>
+      </div>
+
+      <!-- Calendar Grid Headers -->
+      <div class="grid grid-cols-7 border-b border-slate-800 bg-slate-950/60 text-center py-2 text-xs font-semibold text-slate-400">
+        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+      </div>
+
+      <!-- Calendar Days Grid -->
+      <div id="calendarGrid" class="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-slate-800/50 overflow-y-auto">
+        <!-- Dynamic Calendar Cells -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal 1: Add/Edit Log Modal -->
+  <div id="logModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden">
+    <div class="glass-panel w-full max-w-md rounded-2xl p-6 shadow-2xl border border-slate-700/80 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-4 h-4 text-blue-400"></i> 新增/編輯活動紀錄
+        </h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="logForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+        <!-- Record Type Tabs -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">紀錄類型</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="switchType('daily')" id="typeBtn-daily" class="py-2 text-xs font-medium rounded-lg border text-center transition">每日工作</button>
+            <button type="button" onclick="switchType('directive')" id="typeBtn-directive" class="py-2 text-xs font-medium rounded-lg border text-center transition">主管交辦</button>
+            <button type="button" onclick="switchType('event')" id="typeBtn-event" class="py-2 text-xs font-medium rounded-lg border text-center transition">會議行程</button>
+          </div>
+        </div>
+
+        <!-- Common Date Field -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">日期</label>
+          <input type="date" id="inputDate" required class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-blue-500 outline-none">
+        </div>
+
+        <!-- Dynamic Form Fields -->
+        <!-- 1. Daily Work Fields -->
+        <div id="fields-daily" class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">工作內容</label>
+            <input type="text" id="dailyContent" placeholder="例如：撰寫產品開發規格書" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-blue-500 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">完成狀態</label>
+              <select id="dailyStatus" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-blue-500 outline-none">
+                <option value="進行中">進行中</option>
+                <option value="已完成">已完成</option>
+                <option value="延宕">延宕</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">耗時 (小時)</label>
+              <input type="number" step="0.5" id="dailyHours" placeholder="1.5" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-blue-500 outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Directive Fields -->
+        <div id="fields-directive" class="space-y-3 hidden">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">交辦內容</label>
+            <input type="text" id="directiveContent" placeholder="例如：整理 Q3 財務分析報告" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-amber-500 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">交辦人</label>
+              <input type="text" id="directiveAssigner" placeholder="例如：Alex 副總" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-amber-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">優先級</label>
+              <select id="directivePriority" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-amber-500 outline-none">
+                <option value="High">🔴 高 (High)</option>
+                <option value="Medium" selected>🟡 中 (Medium)</option>
+                <option value="Low">🟢 低 (Low)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">截止日期 (Deadline)</label>
+              <input type="date" id="directiveDeadline" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-amber-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">狀態</label>
+              <select id="directiveStatus" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-amber-500 outline-none">
+                <option value="未完成">未完成</option>
+                <option value="已完成">已完成</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Event/Meeting Fields -->
+        <div id="fields-event" class="space-y-3 hidden">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">行程/會議名稱</label>
+            <input type="text" id="eventContent" placeholder="例如：跨部門戰略對齊會議" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-emerald-500 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">時間</label>
+              <input type="time" id="eventTime" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">地點</label>
+              <input type="text" id="eventLocation" placeholder="會議室 A / Teams" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-emerald-500 outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">參與人</label>
+            <input type="text" id="eventAttendees" placeholder="例如：PM 團隊, 設計師" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-emerald-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">備註</label>
+            <input type="text" id="eventNotes" placeholder="攜帶 Q3 簡報資料" class="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 focus:border-emerald-500 outline-none">
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex space-x-3 pt-3">
+          <button type="button" onclick="closeModal()" class="w-1/2 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-medium hover:bg-slate-800">取消</button>
+          <button type="submit" class="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium shadow-lg shadow-blue-600/30">儲存紀錄</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Weekly Summary / Report Modal -->
+  <div id="weeklyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden">
+    <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 shadow-2xl border border-slate-700/80 space-y-4 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+          <i data-lucide="file-check" class="w-5 h-5 text-emerald-400"></i> 每週工作摘要與主管匯報
+        </h3>
+        <button onclick="closeWeeklyModal()" class="text-slate-400 hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-4 pr-1 text-xs">
+        <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
+          <p class="text-slate-400 mb-1">📊 本週工作總覽</p>
+          <div class="grid grid-cols-3 gap-3 text-center py-2">
+            <div class="p-2 rounded bg-slate-800/50">
+              <span class="block text-slate-400 text-[10px]">總工作項目</span>
+              <span id="statTotalWork" class="text-base font-bold text-blue-400">0</span>
+            </div>
+            <div class="p-2 rounded bg-slate-800/50">
+              <span class="block text-slate-400 text-[10px]">完成交辦事項</span>
+              <span id="statDirectivesDone" class="text-base font-bold text-emerald-400">0</span>
+            </div>
+            <div class="p-2 rounded bg-slate-800/50">
+              <span class="block text-slate-400 text-[10px]">累積工時 (小時)</span>
+              <span id="statTotalHours" class="text-base font-bold text-amber-400">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">彙整產出 (可直接複製發送給主管)</label>
+          <textarea id="weeklyReportText" rows="12" class="w-full text-xs font-mono p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 leading-relaxed outline-none focus:border-emerald-500"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-800">
+        <span class="text-[11px] text-slate-500">自動萃取資料庫當週紀錄產出</span>
+        <div class="flex space-x-2">
+          <button onclick="copyWeeklyReport()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> 複製匯報內文
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // System State / Data Store (LocalStorage Backup)
+    let logs = JSON.parse(localStorage.getItem('executive_work_logs')) || [
+      {
+        id: '1',
+        type: 'daily',
+        date: new Date().toISOString().split('T')[0],
+        content: '完工系統核心數據邏輯與流程設計',
+        status: '已完成',
+        hours: '3.5'
+      },
+      {
+        id: '2',
+        type: 'directive',
+        date: new Date().toISOString().split('T')[0],
+        content: '確認 Q4 預算編列細項',
+        assigner: 'David 總監',
+        priority: 'High',
+        deadline: new Date().toISOString().split('T')[0],
+        status: '未完成'
+      },
+      {
+        id: '3',
+        type: 'event',
+        date: new Date().toISOString().split('T')[0],
+        content: '週對齊與進度同步會',
+        time: '14:00',
+        location: '線上 Teams',
+        attendees: '部門全員',
+        notes: '預先準備近兩週數據'
+      }
+    ];
+
+    let dailyReviews = JSON.parse(localStorage.getItem('executive_daily_reviews')) || {};
+
+    let currentDate = new Date();
+    let selectedDateStr = new Date().toISOString().split('T')[0];
+    let currentType = 'daily';
+
+    // Initialize Page
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      switchType('daily');
+      renderCalendar();
+      renderSelectedDayLogs();
+      renderOverdueAlerts();
+    });
+
+    function saveData() {
+      localStorage.setItem('executive_work_logs', JSON.stringify(logs));
+      localStorage.setItem('executive_daily_reviews', JSON.stringify(dailyReviews));
+    }
+
+    // Modal Control
+    function openModal(dateStr = null) {
+      if (dateStr) selectedDateStr = dateStr;
+      document.getElementById('inputDate').value = selectedDateStr;
+      document.getElementById('logModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('logModal').classList.add('hidden');
+    }
+
+    function switchType(type) {
+      currentType = type;
+      ['daily', 'directive', 'event'].forEach(t => {
+        const btn = document.getElementById(`typeBtn-${t}`);
+        const fields = document.getElementById(`fields-${t}`);
+        if (t === type) {
+          btn.className = "py-2 text-xs font-medium rounded-lg border border-blue-500 bg-blue-500/20 text-blue-300 transition";
+          fields.classList.remove('hidden');
+        } else {
+          btn.className = "py-2 text-xs font-medium rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 transition";
+          fields.classList.add('hidden');
+        }
+      });
+    }
+
+    // Form Submit Handler
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const date = document.getElementById('inputDate').value;
+      
+      const newLog = {
+        id: Date.now().toString(),
+        type: currentType,
+        date: date
+      };
+
+      if (currentType === 'daily') {
+        newLog.content = document.getElementById('dailyContent').value || '未命名工作';
+        newLog.status = document.getElementById('dailyStatus').value;
+        newLog.hours = document.getElementById('dailyHours').value || '1.0';
+      } else if (currentType === 'directive') {
+        newLog.content = document.getElementById('directiveContent').value || '未命名交辦事項';
+        newLog.assigner = document.getElementById('directiveAssigner').value || '主管';
+        newLog.priority = document.getElementById('directivePriority').value;
+        newLog.deadline = document.getElementById('directiveDeadline').value || date;
+        newLog.status = document.getElementById('directiveStatus').value;
+      } else if (currentType === 'event') {
+        newLog.content = document.getElementById('eventContent').value || '未命名會議';
+        newLog.time = document.getElementById('eventTime').value || '09:00';
+        newLog.location = document.getElementById('eventLocation').value || '會議室';
+        newLog.attendees = document.getElementById('eventAttendees').value || '';
+        newLog.notes = document.getElementById('eventNotes').value || '';
+      }
+
+      logs.push(newLog);
+      saveData();
+      closeModal();
+      
+      selectedDateStr = date;
+      renderCalendar();
+      renderSelectedDayLogs();
+      renderOverdueAlerts();
+
+      // Reset Form
+      document.getElementById('logForm').reset();
+    }
+
+    // Render Calendar
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      document.getElementById('currentMonthYear').textContent = `${year}年 ${month + 1}月`;
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+
+      // Blank slots before first day
+      for (let i = 0; i < firstDay; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = "bg-slate-950/40 p-1 border-r border-b border-slate-800/40 opacity-30";
+        grid.appendChild(emptyCell);
+      }
+
+      // Day slots
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayLogs = logs.filter(l => l.date === dateStr);
+        const isSelected = dateStr === selectedDateStr;
+        const isToday = dateStr === todayStr;
+
+        const cell = document.createElement('div');
+        cell.className = `p-1.5 border-r border-b border-slate-800/60 transition-all cursor-pointer flex flex-col justify-between group hover:bg-slate-800/40 min-h-[90px] ${
+          isSelected ? 'bg-slate-800/80 ring-1 ring-blue-500/80' : 'bg-slate-950/20'
+        }`;
+        cell.onclick = () => selectDate(dateStr);
+
+        // Header inside cell
+        const header = document.createElement('div');
+        header.className = "flex justify-between items-center mb-1";
+        
+        const dayNum = document.createElement('span');
+        dayNum.className = `text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+          isToday ? 'bg-blue-600 text-white font-bold' : isSelected ? 'text-blue-400' : 'text-slate-400'
+        }`;
+        dayNum.textContent = day;
+
+        header.appendChild(dayNum);
+        cell.appendChild(header);
+
+        <!-- List of indicators/items inside day -->
+        const listContainer = document.createElement('div');
+        listContainer.className = "space-y-1 overflow-hidden flex-1";
+
+        dayLogs.slice(0, 3).forEach(item => {
+          const itemEl = document.createElement('div');
+          let tagColor = "bg-blue-500/20 text-blue-300 border-blue-500/30";
+          if (item.type === 'directive') tagColor = "bg-amber-500/20 text-amber-300 border-amber-500/30";
+          if (item.type === 'event') tagColor = "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
+
+          itemEl.className = `text-[10px] px-1.5 py-0.5 rounded border truncate ${tagColor}`;
+          itemEl.textContent = item.content;
+          listContainer.appendChild(itemEl);
+        });
+
+        if (dayLogs.length > 3) {
+          const moreEl = document.createElement('div');
+          moreEl.className = "text-[9px] text-slate-500 font-medium pl-1";
+          moreEl.textContent = `+ 還有 ${dayLogs.length - 3} 項...`;
+          listContainer.appendChild(moreEl);
+        }
+
+        cell.appendChild(listContainer);
+        grid.appendChild(cell);
+      }
+    }
+
+    function selectDate(dateStr) {
+      selectedDateStr = dateStr;
+      renderCalendar();
+      renderSelectedDayLogs();
+    }
+
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function goToday() {
+      currentDate = new Date();
+      selectedDateStr = currentDate.toISOString().split('T')[0];
+      renderCalendar();
+      renderSelectedDayLogs();
+    }
+
+    // Render Side Panel List for Selected Day
+    function renderSelectedDayLogs() {
+      const title = document.getElementById('selectedDateTitle');
+      const sub = document.getElementById('selectedDateSub');
+      const list = document.getElementById('dayLogList');
+
+      title.textContent = `${selectedDateStr} 記錄詳情`;
+      sub.textContent = `共 ${logs.filter(l => l.date === selectedDateStr).length} 筆活動項目`;
+
+      const dayLogs = logs.filter(l => l.date === selectedDateStr);
+      list.innerHTML = '';
+
+      if (dayLogs.length === 0) {
+        list.innerHTML = `
+          <div class="text-center py-8 text-slate-600 text-xs">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+            無紀錄項目，點擊右上角新增
+          </div>
+        `;
+        lucide.createIcons();
+      } else {
+        dayLogs.forEach(item => {
+          const card = document.createElement('div');
+          card.className = "p-3 rounded-xl glass-card relative group border border-slate-800 hover:border-slate-700 transition";
+
+          let typeBadge = '';
+          if (item.type === 'daily') {
+            typeBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-400 font-medium">每日工作</span>`;
+          } else if (item.type === 'directive') {
+            typeBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 font-medium">主管交辦</span>`;
+          } else {
+            typeBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 font-medium">會議行程</span>`;
+          }
+
+          let extraInfo = '';
+          if (item.type === 'daily') {
+            extraInfo = `<div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+              <span>狀態: <strong class="text-slate-200">${item.status}</strong></span>
+              <span>耗時: <strong>${item.hours}h</strong></span>
+            </div>`;
+          } else if (item.type === 'directive') {
+            extraInfo = `<div class="mt-1 text-[11px] text-slate-400 space-y-0.5">
+              <div class="flex justify-between"><span>交辦人: ${item.assigner}</span> <span>優先級: ${item.priority}</span></div>
+              <div class="flex justify-between"><span>期限: ${item.deadline}</span> <span class="${item.status === '已完成' ? 'text-emerald-400' : 'text-amber-400'}">${item.status}</span></div>
+            </div>`;
+          } else if (item.type === 'event') {
+            extraInfo = `<div class="mt-1 text-[11px] text-slate-400">
+              <div>時間: ${item.time} | 地點: ${item.location}</div>
+              ${item.attendees ? `<div>參與人: ${item.attendees}</div>` : ''}
+            </div>`;
+          }
+
+          card.innerHTML = `
+            <div class="flex justify-between items-start mb-1">
+              ${typeBadge}
+              <button onclick="deleteLog('${item.id}')" class="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+            <p class="text-xs font-semibold text-slate-200 mt-1">${item.content}</p>
+            ${extraInfo}
+          `;
+          list.appendChild(card);
+        });
+        lucide.createIcons();
+      }
+
+      // Load Daily Review text for selected day
+      const reviewInput = document.getElementById('dailyReviewInput');
+      reviewInput.value = dailyReviews[selectedDateStr] || '';
+    }
+
+    function deleteLog(id) {
+      logs = logs.filter(l => l.id !== id);
+      saveData();
+      renderCalendar();
+      renderSelectedDayLogs();
+      renderOverdueAlerts();
+    }
+
+    function saveDailyReview() {
+      const text = document.getElementById('dailyReviewInput').value;
+      dailyReviews[selectedDateStr] = text;
+      saveData();
+      alert('每日工作回顧已儲存！');
+    }
+
+    // Render Overdue & High Priority Items
+    function renderOverdueAlerts() {
+      const alertList = document.getElementById('alertList');
+      const overdueCount = document.getElementById('overdueCount');
+      const today = new Date().toISOString().split('T')[0];
+
+      const pendingDirectives = logs.filter(l => l.type === 'directive' && l.status !== '已完成');
+      overdueCount.textContent = pendingDirectives.length;
+
+      alertList.innerHTML = '';
+
+      if (pendingDirectives.length === 0) {
+        alertList.innerHTML = `<p class="text-[11px] text-slate-500 text-center py-2">目前無延宕或待辦事項</p>`;
+      } else {
+        pendingDirectives.forEach(item => {
+          const isOverdue = item.deadline < today;
+          const el = document.createElement('div');
+          el.className = `p-2 rounded-lg border text-xs flex justify-between items-center ${
+            isOverdue ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+          }`;
+
+          el.innerHTML = `
+            <div class="truncate pr-2">
+              <div class="font-medium truncate">${item.content}</div>
+              <div class="text-[10px] opacity-80">期限: ${item.deadline} (${item.assigner})</div>
+            </div>
+            <button onclick="toggleDirectiveDone('${item.id}')" class="shrink-0 px-2 py-1 rounded bg-slate-800 hover:bg-emerald-600 text-[10px] text-slate-200 hover:text-white transition">
+              標示完成
+            </button>
+          `;
+          alertList.appendChild(el);
+        });
+      }
+    }
+
+    function toggleDirectiveDone(id) {
+      const item = logs.find(l => l.id === id);
+      if (item) {
+        item.status = '已完成';
+        saveData();
+        renderCalendar();
+        renderSelectedDayLogs();
+        renderOverdueAlerts();
+      }
+    }
+
+    // Weekly Summary Modal Generator
+    function openWeeklySummary() {
+      const totalWork = logs.filter(l => l.type === 'daily').length;
+      const directivesDone = logs.filter(l => l.type === 'directive' && l.status === '已完成').length;
+      const totalHours = logs.filter(l => l.type === 'daily').reduce((acc, curr) => acc + (parseFloat(curr.hours) || 0), 0);
+
+      document.getElementById('statTotalWork').textContent = totalWork;
+      document.getElementById('statDirectivesDone').textContent = directivesDone;
+      document.getElementById('statTotalHours').textContent = totalHours;
+
+      // Build structured text report
+      let reportText = `📌 【工作週報與重點回報】\n報告日期: ${new Date().toLocaleDateString('zh-TW')}\n\n`;
+      
+      reportText += `一、 主管交辦事項與重點進度：\n`;
+      const directives = logs.filter(l => l.type === 'directive');
+      if (directives.length === 0) reportText += `  - 無特定交辦紀錄\n`;
+      directives.forEach(d => {
+        reportText += `  • [${d.status}] ${d.content} (交辦人: ${d.assigner} / 期限: ${d.deadline})\n`;
+      });
+
+      reportText += `\n二、 每日主要工作執行紀錄：\n`;
+      const dailyWork = logs.filter(l => l.type === 'daily');
+      if (dailyWork.length === 0) reportText += `  - 本週尚無常規工作紀錄\n`;
+      dailyWork.forEach(w => {
+        reportText += `  • [${w.date}] ${w.content} (${w.status}, 投入 ${w.hours} 小時)\n`;
+      });
+
+      reportText += `\n三、 重要會議與行程摘要：\n`;
+      const events = logs.filter(l => l.type === 'event');
+      if (events.length === 0) reportText += `  - 無特定會議紀錄\n`;
+      events.forEach(e => {
+        reportText += `  • [${e.date} ${e.time}] ${e.content} (${e.location})\n`;
+      });
+
+      reportText += `\n四、 本週工作回顧與心得：\n`;
+      Object.keys(dailyReviews).forEach(dateKey => {
+        if (dailyReviews[dateKey]) {
+          reportText += `  • [${dateKey}] ${dailyReviews[dateKey]}\n`;
+        }
+      });
+
+      document.getElementById('weeklyReportText').value = reportText;
+      document.getElementById('weeklyModal').classList.remove('hidden');
+    }
+
+    function closeWeeklyModal() {
+      document.getElementById('weeklyModal').classList.add('hidden');
+    }
+
+    function copyWeeklyReport() {
+      const text = document.getElementById('weeklyReportText');
+      text.select();
+      document.execCommand('copy');
+      alert('匯報內文已成功複製到剪貼簿！');
+    }
+  </script>
+</body>
+</html>
